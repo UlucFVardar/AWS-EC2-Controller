@@ -7,151 +7,191 @@ from datetime import datetime
 
 # --- EC2_Controller ---------------------------------------------------------------------------
 class EC2_controller:
-    def __init__(self,ImageId = None, InstanceType = None , IamInstanceProfile = None , instance_id = None):
+    def __init__(self,ImageId = None, InstanceType = None , IamInstanceProfile = None , instance_id = None, instance_ids = list(), number_of_nodes = 1, instance_name = 'Ec2_Controller_Class_Configured_Ec2'):
+        self.number_of_nodes = number_of_nodes 
+        self.instance_ids = instance_ids
         self.ImageId = ImageId
         self.instance_id = instance_id
         self.InstanceType = InstanceType
         self.IamInstanceProfile = IamInstanceProfile
         self.client = boto3.client('ec2')
         self.ssm_client = boto3.client('ssm') 
+        self.instance_name = instance_name
 
     #------------- EC2 Create--------------
-    def create_an_Ec2_and_configure(self):
-        def state_look(id):
-            ec2 = boto3.resource('ec2')
-            for status in ec2.meta.client.describe_instance_status()['InstanceStatuses']:
-                if status['InstanceId'] == id :
-                    return status['SystemStatus']['Status']
-            return 'None'
-        resp = self.client.run_instances( ImageId = self.ImageId ,
-                                    InstanceType = self.InstanceType, #m5a.xlarge
-                                    MinCount = 1,
-                                    MaxCount = 1,
-                                    IamInstanceProfile={
-                                        'Arn': self.IamInstanceProfile
-                                    })
-        for instance in resp['Instances']:
-            instance_id =  instance['InstanceId']
-            break
-        flag = True
-        i = 0
-        while flag == True:
-            
-            ###----
-            global start_time
-            c = datetime.now()-start_time
-            dif = int(divmod(c.days * 86400 + c.seconds, 60)[0])
-            print "Başlayalı ",dif,"dk oldu."
-            if 14 <= dif :
-                print  "---------------------KOD BAŞLAYALI 14 DK OLDU SISTEM KAPANACAK---------------------"
-                
-                
-                
-                print '----- Ec2 kapatilacak -----'
-                global mss_id
-                flag = self.terminate_an_Ec2()
-                sendTelegramMess (header = {
-        							"chat_id": "-387770577",
-        							'from' : '[Lambda] Hurriyet_Recomadation, id : '+instance_id, #bold
-        							'text' :  'EC2 CLOSED!',
-        							'reply_to_message_id' : mss_id
-        							})               
-                print '----- Ec2 Kapatılma durumu ',flag,'-----'  
-            ####---
-            
-            state = state_look(instance_id)
-            #print "iterate",i,state
-            i +=1
-            #flag = False ## deneme
-            #if state == "initializing":
-            if state == 'ok':
-                flag = False
-                break
+    def start_ec2s(self, key_pair_name = None, SecurityGroup = None):
+        if SecurityGroup != None:
+            if key_pair_name == None:
+                resp = self.client.run_instances( ImageId = self.ImageId ,                            
+                                                  InstanceType = self.InstanceType, 
+                                                  MinCount = self.number_of_nodes ,
+                                                  MaxCount = self.number_of_nodes ,
+                                                  IamInstanceProfile={ 'Arn': self.IamInstanceProfile },
+                                                  SecurityGroups=[SecurityGroup],
+                                                  TagSpecifications=[
+                                                                    {
+                                                                                    'ResourceType': 'instance',
+                                                                        'Tags': [
+                                                                            {
+                                                                                'Key': 'Name',
+                                                                                'Value': self.instance_name
+                                                                            },
+                                                                        ]
+                                                                    },
+                                                                ],
+                                                                     )   
             else:
-                time.sleep(2)   
-        time.sleep(5)   
-        self.instance_id = instance_id
-        return instance_id
+                resp = self.client.run_instances( ImageId = self.ImageId ,                                                                          
+                                                  KeyName  = key_pair_name,
+                                                  MinCount = self.number_of_nodes ,
+                                                  MaxCount = self.number_of_nodes ,
+                                                  SecurityGroups=[SecurityGroup],
+                                                  InstanceType = self.InstanceType,                                               
+                                                  IamInstanceProfile={ 'Arn': self.IamInstanceProfile },
+                                                  TagSpecifications=[
+                                                                    {
+                                                                                    'ResourceType': 'instance',
+                                                                        'Tags': [
+                                                                            {
+                                                                                'Key': 'Name',
+                                                                                'Value': self.instance_name
+                                                                            },
+                                                                        ]
+                                                                    },
+                                                                ],
+                                                                     )               
+        else:
+            if key_pair_name == None:
+                resp = self.client.run_instances( ImageId = self.ImageId ,                            
+                                                  InstanceType = self.InstanceType, 
+                                                  MinCount = self.number_of_nodes ,
+                                                  MaxCount = self.number_of_nodes ,
+                                                  IamInstanceProfile={ 'Arn': self.IamInstanceProfile },
+                                                  TagSpecifications=[
+                                                                    {
+                                                                                    'ResourceType': 'instance',
+                                                                        'Tags': [
+                                                                            {
+                                                                                'Key': 'Name',
+                                                                                'Value': self.instance_name
+                                                                            },
+                                                                        ]
+                                                                    },
+                                                                ],
+                                                                     )   
+            else:
+                resp = self.client.run_instances( ImageId = self.ImageId ,                                                                          
+                                                  KeyName  = key_pair_name,
+                                                  MinCount = self.number_of_nodes ,
+                                                  MaxCount = self.number_of_nodes ,
+                                                  InstanceType = self.InstanceType,                                               
+                                                  IamInstanceProfile={ 'Arn': self.IamInstanceProfile },
+                                                  TagSpecifications=[
+                                                                    {
+                                                                                    'ResourceType': 'instance',
+                                                                        'Tags': [
+                                                                            {
+                                                                                'Key': 'Name',
+                                                                                'Value': self.instance_name
+                                                                            },
+                                                                        ]
+                                                                    },
+                                                                ],
+                                                                     )               
+
+
+
+
+        for instance in resp['Instances']:
+            instance_id =  str(instance['InstanceId'])
+            self.instance_ids.append( instance_id )
+        return self.instance_ids
     #--------------------------------------
-    
+
     #------------- EC2 Terminate-----------
-    def terminate_an_Ec2(self):
+    def terminate_ec2s(self):
+        if self.number_of_nodes > 1:
+            instance_list = self.instance_ids
+        elif self.number_of_nodes == 1:
+            instance_list = [self.instance_id]
+
         time.sleep(2) # wait for a certain time
         try:
-            response = self.client.terminate_instances(  InstanceIds=[ self.instance_id ],
-                                                    DryRun=False )
+            response = self.client.terminate_instances(  InstanceIds = instance_list, DryRun=False )
             return True
         except Exception as e:
             raise Exception ("[EC2 Terminate ERROR]: "+str(e))
     #--------------------------------------
     
-    
-    #------------EC2 Run Script -----------
-    def run_script_fromS3(self, path , command):
-        print type(self.instance_id)
-        print  [self.instance_id],'brda'
-        print  type([self.instance_id]),'brda'
-        
-        instance_ids = list()
-        instance_ids.append(self.instance_id)
-        resp = self.ssm_client.send_command(
-            DocumentName="AWS-RunRemoteScript",
-            Parameters={
-                        "sourceType":  ["S3"],
-                        "sourceInfo":  [path],
-                        "commandLine": [command]
-                        },
-                        InstanceIds = instance_ids
-            )
-
-
-    def run_command(self,commands, OutputS3BucketName_ = None, OutputS3KeyPrefix_ = None):
+    #------------- EC2 Code Run -----------
+    def run_command(self, commands, workingDirectory, OutputS3BucketName_ = None, OutputS3KeyPrefix_ = "Ec2_Controller_Class_Output", executionTimeout = "172800", instance_id = None ):
+        if self.number_of_nodes > 1:
+            instance_list = self.instance_ids
+        elif self.number_of_nodes == 1:
+            instance_list = [self.instance_id]
+        if instance_id !=None:
+            instance_list = [instance_id]
 
         if OutputS3BucketName_ == None and OutputS3KeyPrefix_ == None:
             response = self.ssm_client.send_command(
-                                                DocumentName = "AWS-RunShellScript",
-                                                Parameters   = {'commands': commands },
-                                                InstanceIds  = [self.instance_id]     )
+                                                DocumentName = "AWS-RunShellScript"                   ,
+                                                InstanceIds  = instance_list                          ,
+                                                Parameters   = { "commands": commands                 ,
+                                                                 "workingDirectory":[workingDirectory],
+                                                                 "executionTimeout":[executionTimeout] }  )
         else:
             response = self.ssm_client.send_command(
-                                                OutputS3BucketName = OutputS3BucketName_,
-                                                OutputS3KeyPrefix = OutputS3KeyPrefix_  ,
-                                                DocumentName = "AWS-RunShellScript"     ,
-                                                Parameters   = {'commands': commands }  ,
-                                                InstanceIds  = [self.instance_id]     )
+                                                OutputS3BucketName = OutputS3BucketName_              ,
+                                                OutputS3KeyPrefix  = OutputS3KeyPrefix_               ,
+                                                DocumentName = "AWS-RunShellScript"                   ,                                                
+                                                InstanceIds  = instance_list                          ,
+                                                Parameters   = { "commands": commands                 ,
+                                                                 "workingDirectory":[workingDirectory],
+                                                                 "executionTimeout":[executionTimeout] }  )
 
         print response
     #--------------------------------------
-    
+
+ 
+    def configure_machines(self):
+        def state_look(id):
+            ec2 = boto3.resource('ec2')
+            for status in ec2.meta.client.describe_instance_status()['InstanceStatuses']:
+                if status['InstanceId'] == id :
+                    return status['SystemStatus']['Status']
+            return 'None'           
+        #self.instance_ids
+        self.flags = [False for number in range(self.number_of_nodes)]
+        start_time = datetime.now()
+        while True:
+            ###----
+            temp_dif = datetime.now()-start_time
+            dif = int(divmod(temp_dif.days * 86400 + temp_dif.seconds, 60)[0])
+            print "Başlayalı %s dk oldu."%str(dif)
+            if 14 <= dif :
+                print  "---------------------KOD BAŞLAYALI 14 DK OLDU SISTEM KAPANACAK---------------------"
+                #CLOSE SYSTEM
+            else:
+                for i,instance_id in enumerate(self.instance_ids):
+                    if self.flags[i] == True:
+                        continue 
+                    state = state_look(instance_id)    
+                    if state == 'ok':
+                        self.flags[i] = True
+                #Wait a bit 
+                time.sleep(2) 
+            if False not in self.flags:
+                break
+        print "All EC2 Machines are ready!! "
+        # Now here 
+
+
     def set_image_id(self, ImageId):
         self.ImageId = ImageId
     def set_instance_id(self,instance_id):
         self.instance_id = instance_id
+    def set_instances_ids(self,instance_ids):
+        self.instance_ids = instance_ids
 # ----------------------------------------------------------------------------------------------
 
     
-### USE EXAMPLES 
-
-def ec2_create_example():
-    ec2_c = EC2_controller( ImageId = 'ami-...........', # Ec2 image ID 
-                            InstanceType = 't2.large' ,  # 'm5a.xlarge'
-                            IamInstanceProfile = '.......' ) # EC2 ınstance role
-    ## next 2 line lunch an ec2 with setted conf. #code waits until machine access to ready state. Took a while (3-10 min)
-    instance_id = ec2_c.create_an_Ec2_and_configure()
-    print 'instance ID',instance_id
-
-
-def ec2_runcommand_example():
-    '''
-    after creation of ec2 or an exist ec2
-    '''
-    ec2_c = EC2_controller( instance_id = '...id..of..instance...' ) # EC2 ınstance role
-    commands = ["touch /home/ec2-user/examplefile.txt"]          
-    ec2_c.run_command(commands)
-        
-def ec2_terminate_example():
-    #to  terminate an ec2
-    ec2_c = EC2_controller()
-    ec2_c.set_instance_id(".....instance_id....")
-
-    flag = ec2_c.terminate_an_Ec2()        
