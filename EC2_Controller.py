@@ -19,7 +19,7 @@ class EC2_controller:
         self.instance_name = instance_name
 
     #------------- EC2 Create--------------
-    def start_ec2s(self, key_pair_name = None, SecurityGroup = None):
+    def start_ec2s(self, Tag_Key, Tag_Value, key_pair_name = None, SecurityGroup = None ):
         if SecurityGroup != None:
             if key_pair_name == None:
                 resp = self.client.run_instances( ImageId = self.ImageId ,                            
@@ -35,6 +35,9 @@ class EC2_controller:
                                                                             {
                                                                                 'Key': 'Name',
                                                                                 'Value': self.instance_name
+                                                                            },{
+                                                                                'Key': Tag_Key,
+                                                                                'Value': Tag_Value
                                                                             },
                                                                         ]
                                                                     },
@@ -55,6 +58,9 @@ class EC2_controller:
                                                                             {
                                                                                 'Key': 'Name',
                                                                                 'Value': self.instance_name
+                                                                            },{
+                                                                                'Key': Tag_Key,
+                                                                                'Value': Tag_Value
                                                                             },
                                                                         ]
                                                                     },
