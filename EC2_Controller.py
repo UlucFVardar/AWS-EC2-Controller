@@ -7,9 +7,10 @@ from datetime import datetime
 
 # --- EC2_Controller ---------------------------------------------------------------------------
 class EC2_controller:
-    def __init__(self,ImageId = None, InstanceType = None , IamInstanceProfile = None , instance_id = None, instance_ids = list(), number_of_nodes = 1, instance_name = 'Ec2_Controller_Class_Configured_Ec2'):
+    def __init__(self,ImageId = None, InstanceType = None , IamInstanceProfile = None , instance_id = None, instance_ids = None, number_of_nodes = 1, instance_name = 'Ec2_Controller_Class_Configured_Ec2'):
         self.number_of_nodes = number_of_nodes 
-        self.instance_ids = instance_ids
+        if instance_ids != None:
+            self.instance_ids = instance_ids
         self.ImageId = ImageId
         self.instance_id = instance_id
         self.InstanceType = InstanceType
@@ -107,9 +108,10 @@ class EC2_controller:
 
 
 
-
+        self.instance_ids = []
         for instance in resp['Instances']:
             instance_id =  str(instance['InstanceId'])
+            
             self.instance_ids.append( instance_id )
         return self.instance_ids
     #--------------------------------------
@@ -128,6 +130,7 @@ class EC2_controller:
         except Exception as e:
             raise Exception ("[EC2 Terminate ERROR]: "+str(e))
     #--------------------------------------
+    
     
     #------------- EC2 Code Run -----------
     def run_command(self, commands, workingDirectory, OutputS3BucketName_ = None, OutputS3KeyPrefix_ = "Ec2_Controller_Class_Output", executionTimeout = "172800", instance_id = None ):
