@@ -131,7 +131,7 @@ class EC2_controller:
             raise Exception ("[EC2 Terminate ERROR]: "+str(e))
     #--------------------------------------
     
-    
+  
     #------------- EC2 Code Run -----------
     def run_command(self, commands, workingDirectory, OutputS3BucketName_ = None, OutputS3KeyPrefix_ = "Ec2_Controller_Class_Output", executionTimeout = "172800", instance_id = None ):
         if self.number_of_nodes > 1:
@@ -161,7 +161,6 @@ class EC2_controller:
         print response
     #--------------------------------------
 
- 
     def configure_machines(self):
         def state_look(id):
             ec2 = boto3.resource('ec2')
@@ -210,3 +209,57 @@ def stop_your_self(region = 'eu-west-1'):
 	instance_id = os.popen("curl http://169.254.169.254/latest/meta-data/instance-id").read()
 	client = boto3.client('ec2',region)
 	client.stop_instances(  InstanceIds = [instance_id], DryRun=False )    
+
+
+
+# ==================================================================================================
+# ======= Example ==================================================================================
+# ==================================================================================================
+def example():
+    # ------- Create Ec2s -----------------------------
+    number_of_slave = 1
+    ec2s_c_Search = EC2_controller( ImageId 			= 'ami-071341f40ec9....',  # Ec2 image ID 
+                            		InstanceType 		= 't2.micro' ,                # 'm5a.xlarge'
+                            		IamInstanceProfile  = 'arn:aws:iam::027534141241.....',
+                            		number_of_nodes 	=  number_of_slave,
+                            		instance_name 		= 'Search Twint_Daily D : ..date..' ) # EC2 ınstance role
+
+                            
+    ## next 2 line lunch an ec2 with setted conf. #code waits until machine access to ready state. Took a while (3-10 min)
+    ec2s_c_Search.start_ec2s( Tag_Key = 'Twint', Tag_Value = 'Uluc',key_pair_name = "ULUC_", SecurityGroup = "launch-wizard-18")
+    print 'Search', ec2s_c_Search.instance_ids
+    # -------------------------------------------------    # -------------------------------------------------
+    ec2s_c_Search.configure_machines()
+    
+
+    # - ---- - - - -- - - OR
+    for i in range(0,number_of_slave):   
+        ec2s_c_Search.run_command(instance_id         = ec2s_c_Search.instance_ids[i]                    ,
+                                  workingDirectory    = "/home/ec2-user/"                         ,
+                                  OutputS3KeyPrefix_  = "Outputs/Twint Search D: %s -- %s"%(today_date, str(ec2s_c_Search.instance_ids[i])),
+                                  OutputS3BucketName_ = "twitter-twint-crawled-data"              ,
+                                  commands            = [ "export LANG=tr_TR.UTF-8"  ,
+                                                          "aws s3 cp s3://twitter-twint-crawled-data/Scripts/userlists-for-slaves/Search/userL-%s.txt ./userData.txt"%str(i+1),
+                                                          "aws s3 cp s3://twitter-twint-crawled-data/Scripts/searchData.zip ./searchData.zip",
+                                                          "unzip searchData.zip"                    ,
+                                                          "rm searchData.zip"                       ,
+                                                          "python3 searchData.py"]     )
+    # - ---- - - - -- - - OR
+    # ALL OF THEM RUNS SAME CODE
+    ec2s_c_Search.run_command(workingDirectory    = "/home/ec2-user/"                         ,
+                              OutputS3KeyPrefix_  = "Outputs/Twint Search D: ALL OF THEM RUNS SAME CODE",
+                              OutputS3BucketName_ = "twitter-twint-crawled-data"              ,
+                              commands            = [ "export LANG=tr_TR.UTF-8"  ,
+                                                      "aws s3 cp s3://twitter-twint-crawled-data/Scripts/userlists-for-slaves/Search/userL.txt ./userData.txt",
+                                                      "aws s3 cp s3://twitter-twint-crawled-data/Scripts/searchData.zip ./searchData.zip",
+                                                      "unzip searchData.zip"                    ,
+                                                      "rm searchData.zip"                       ,
+                                                      "python3 searchData.py"]     )    
+
+
+
+
+
+
+
+
