@@ -4,7 +4,7 @@ import boto3
 import time
 import json
 from datetime import datetime
-
+import os
 # --- EC2_Controller ---------------------------------------------------------------------------
 class EC2_controller:
     def __init__(self,ImageId = None, InstanceType = None , IamInstanceProfile = None , instance_id = None, instance_ids = None, number_of_nodes = 1, instance_name = 'Ec2_Controller_Class_Configured_Ec2'):
@@ -194,7 +194,6 @@ class EC2_controller:
         print "All EC2 Machines are ready!! "
         # Now here 
 
-
     def set_image_id(self, ImageId):
         self.ImageId = ImageId
     def set_instance_id(self,instance_id):
@@ -202,5 +201,12 @@ class EC2_controller:
     def set_instances_ids(self,instance_ids):
         self.instance_ids = instance_ids
 # ----------------------------------------------------------------------------------------------
+def close_your_self(region = 'eu-west-1'):
+	instance_id = os.popen("curl http://169.254.169.254/latest/meta-data/instance-id").read()
+	ec2 = boto3.resource('ec2',region)
+	ec2.instances.filter(InstanceIds=[instance_id]).terminate()
 
-    
+def stop_your_self(region = 'eu-west-1'):
+	instance_id = os.popen("curl http://169.254.169.254/latest/meta-data/instance-id").read()
+	client = boto3.client('ec2',region)
+	client.stop_instances(  InstanceIds = [instance_id], DryRun=False )    
