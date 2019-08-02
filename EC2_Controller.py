@@ -201,15 +201,21 @@ class EC2_controller:
         self.instance_ids = instance_ids
 # ----------------------------------------------------------------------------------------------
 def close_your_self(region = 'eu-west-1'):
-	instance_id = os.popen("curl http://169.254.169.254/latest/meta-data/instance-id").read()
-	ec2 = boto3.resource('ec2',region)
-	ec2.instances.filter(InstanceIds=[instance_id]).terminate()
+    instance_id = os.popen("curl http://169.254.169.254/latest/meta-data/instance-id").read()
+    ec2 = boto3.resource('ec2',region)
+    ec2.instances.filter(InstanceIds=[instance_id]).terminate()
 
 def stop_your_self(region = 'eu-west-1'):
-	instance_id = os.popen("curl http://169.254.169.254/latest/meta-data/instance-id").read()
-	client = boto3.client('ec2',region)
-	client.stop_instances(  InstanceIds = [instance_id], DryRun=False )    
+    instance_id = os.popen("curl http://169.254.169.254/latest/meta-data/instance-id").read()
+    client = boto3.client('ec2',region)
+    client.stop_instances(  InstanceIds = [instance_id], DryRun=False )    
 
+def get_instance_is_with_tag(tag_name, tag_value):
+    ec2 = boto3.resource('ec2')
+    instances = ec2.instances.filter(Filters = [{'Name': 'tag:%s'%tag_name, 'Values': [tag_name]}])
+    for instance in instances:    
+        print instance
+        #print status['InstanceId']
 
 
 # ==================================================================================================
@@ -218,11 +224,11 @@ def stop_your_self(region = 'eu-west-1'):
 def example():
     # ------- Create Ec2s -----------------------------
     number_of_slave = 1
-    ec2s_c_Search = EC2_controller( ImageId 			= 'ami-071341f40ec9....',  # Ec2 image ID 
-                            		InstanceType 		= 't2.micro' ,                # 'm5a.xlarge'
-                            		IamInstanceProfile  = 'arn:aws:iam::027534141241.....',
-                            		number_of_nodes 	=  number_of_slave,
-                            		instance_name 		= 'Search Twint_Daily D : ..date..' ) # EC2 ınstance role
+    ec2s_c_Search = EC2_controller( ImageId             = 'ami-071341f40ec9....',  # Ec2 image ID 
+                                    InstanceType        = 't2.micro' ,                # 'm5a.xlarge'
+                                    IamInstanceProfile  = 'arn:aws:iam::027534141241.....',
+                                    number_of_nodes     =  number_of_slave,
+                                    instance_name       = 'Search Twint_Daily D : ..date..' ) # EC2 ınstance role
 
                             
     ## next 2 line lunch an ec2 with setted conf. #code waits until machine access to ready state. Took a while (3-10 min)
