@@ -210,12 +210,7 @@ def stop_your_self(region = 'eu-west-1'):
     client = boto3.client('ec2',region)
     client.stop_instances(  InstanceIds = [instance_id], DryRun=False )    
 
-def get_instance_is_with_tag(tag_name, tag_value):
-    ec2 = boto3.resource('ec2')
     instances = ec2.instances.filter(Filters = [{'Name': 'tag:%s'%tag_name, 'Values': [tag_name]}])
-    for instance in instances:    
-        print instance
-        #print status['InstanceId']
 
 
 # ==================================================================================================
